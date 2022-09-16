@@ -1,5 +1,7 @@
-const gridThickness = 0.01;
-const axisThickness = 0.02;
+const gridThickness = 0.005;
+const axisThickness = 0.01;
+const gridRadius = 0.01;
+const axisRadius = 0.015;
 const gridStyle = "black";
 const axisStyle = "red";
 const scrollAmount = 1.1;
@@ -112,6 +114,14 @@ function draw() {
 		context.lineTo(b.x, b.y);
 		context.stroke();
 	}
+	for (var i = -10; i <= 10; i++)
+		for (var j = -10; j <= 10; j++) {
+			context.fillStyle = i == 0 || j == 0 ? axisStyle : gridStyle;
+			const position = mat3.multiplyVector(camera, new vec3(i, j, 1));
+			context.beginPath();
+			context.arc(position.x, position.y, i == 0 || j == 0 ? axisRadius : gridRadius, 0, 2 * Math.PI, false);
+			context.fill();
+		}
 }
 
 window.addEventListener("load", event => {
