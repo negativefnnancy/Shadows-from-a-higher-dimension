@@ -1,23 +1,27 @@
 const gridThickness = 0.005;
 const axisThickness = 0.01;
+const lineThickness = 0.01;
 const gridRadius = 0.01;
 const axisRadius = 0.015;
 const gridStyle = "black";
 const axisStyle = "red";
+const lineStyle = "green";
 const scrollAmount = 1.1;
 
 var canvas;
 var context;
 
 class Mouse {
-	constructor(x, y, down) {
+	constructor(x, y, left, right) {
 		this.x = x;
 		this.y = y;
-		this.down = down;
+		this.left = left;
+		this.right = right;
 	}
 }
 
-var mouse = new Mouse(0, 0, false);
+var mouse = new Mouse(0, 0, false, false);
+var slope = -1/2;
 
 class vec3 {
 	// x, y, and z are numbers
@@ -114,6 +118,8 @@ function draw() {
 		context.lineTo(b.x, b.y);
 		context.stroke();
 	}
+
+	// Draw lattice nodes.
 	for (var i = -10; i <= 10; i++)
 		for (var j = -10; j <= 10; j++) {
 			context.fillStyle = i == 0 || j == 0 ? axisStyle : gridStyle;
@@ -122,6 +128,16 @@ function draw() {
 			context.arc(position.x, position.y, i == 0 || j == 0 ? axisRadius : gridRadius, 0, 2 * Math.PI, false);
 			context.fill();
 		}
+
+	// Draw projection plane.
+	const a = mat3.multiplyVector(camera, new vec3(-10, -10 * slope, 1));
+	const b = mat3.multiplyVector(camera, new vec3( 10,  10 * slope, 1));
+	context.lineWidth = lineThickness;
+	context.strokeStyle = lineStyle;
+	context.beginPath();
+	context.moveTo(a.x, a.y);
+	context.lineTo(b.x, b.y);
+	context.stroke();
 }
 
 window.addEventListener("load", event => {
@@ -131,6 +147,8 @@ window.addEventListener("load", event => {
 	canvas.height = window.innerHeight;
 	draw();
 
+	canvas.addEventListener("contextmenu", event => event.preventDefault());
+
 	canvas.addEventListener("wheel", event => {
 		const amount = Math.pow(scrollAmount, -event.deltaY / 100);
 		camera = mat3.multiply(mat3.scale(amount, amount), camera);
@@ -139,19 +157,31 @@ window.addEventListener("load", event => {
 
 	canvas.addEventListener("mousemove", event => {
 		const unit = canvas.width / 2;
-		mouse.x = event.offsetX / unit;
-		mouse.y = event.offsetY / unit;
-		if (mouse.down) {
+		const aspect = canvas.width / canvas.height;
+		mouse.x = event.offsetX / unit - 1;
+		mouse.y = event.offsetY / unit - 1 / aspect;
+		if (mouse.left) {
 			camera = mat3.multiply(mat3.translate(event.movementX / unit, event.movementY / unit), camera);
+			draw();
+		}
+		if (mouse.right) {
+			const position = mat3.multiplyVector(camera, new vec3(mouse.x, mouse.y, 1));
+			slope = position.y / position.x;
 			draw();
 		}
 	});
 
 	canvas.addEventListener("mousedown", event => {
-		mouse.down = true;
+		if (event.button == 0)
+			mouse.left = true;
+		else if (event.button == 2)
+			mouse.right = true;
 	});
 
 	canvas.addEventListener("mouseup", event => {
-		mouse.down = false;
+		if (event.button == 0)
+			mouse.left = false;
+		else if (event.button == 2)
+			mouse.right = false;
 	});
 });
