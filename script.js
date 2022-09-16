@@ -138,6 +138,13 @@ function draw() {
 	context.moveTo(a.x, a.y);
 	context.lineTo(b.x, b.y);
 	context.stroke();
+
+	// TODO Unit square moveable with middle mouse button.
+	// TODO Draw the orthogonal line as well.
+	// TODO Project square onto the orthogonal line.
+	// TODO Multiply that projected region by the original line to get sliver of lattice.
+	// TODO Highlight all nodes within that region.
+	// TODO Project those points onto the original line.
 }
 
 window.addEventListener("load", event => {
