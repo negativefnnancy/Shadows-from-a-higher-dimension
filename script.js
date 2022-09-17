@@ -1,4 +1,4 @@
-const gridThickness = 0.01;
+const gridThickness = 0.005;
 const axisThickness = 0.02;
 const lineThickness = 0.02;
 const orthogonalLineThickness = 0.01;
@@ -13,8 +13,7 @@ const orthogonalLineStyle = "#080";
 const unitHyperCubeStyle = "blue";
 const unitHyperCubeStyleOrigin = "#88f";
 const unitHyperCubeStyleOriginLocal = "#8cf";
-const vectorStyleGlobal = "#ff0";
-const vectorStyleLocal = "#f80";
+const vectorStyle = "#f80";
 const scrollAmount = 1.1;
 
 let canvas;
@@ -54,6 +53,10 @@ class vec3 {
 
 	angle() {
 		return Math.atan2(this.y, this.x);
+	}
+
+	scale(x, y, z) {
+		return new vec3(this.x * x, this.y * y, this.z * z);
 	}
 
 	static add(a, b) {
@@ -303,28 +306,34 @@ function draw() {
 	const p2 = vec3.add(unitHyperCubePosition, p2o);
 	const p3 = vec3.add(unitHyperCubePosition, p3o);
 	const p4 = vec3.add(unitHyperCubePosition, p4o);
+	p1.z = 1;
+	p2.z = 1;
+	p3.z = 1;
+	p4.z = 1;
 
-	// Get local coordinate system of rotated line.
-	const local = mat3.rotate(-Math.atan(slope));
+	// Get local coordinate system of rotated line and the inverse for later.
+	const local = mat3.rotate(Math.atan(slope));
+	const localInverse = local.invert();
 
-	// Transform original vertices to local coordinates of line.
-	const p1ol = mat3.multiplyVector(local, p1o);
-	const p2ol = mat3.multiplyVector(local, p2o);
-	const p3ol = mat3.multiplyVector(local, p3o);
-	const p4ol = mat3.multiplyVector(local, p4o);
+	// Transform vertices to local coordinates of line.
+	const p1ol = mat3.multiplyVector(local, p1);
+	const p2ol = mat3.multiplyVector(local, p2);
+	const p3ol = mat3.multiplyVector(local, p3);
+	const p4ol = mat3.multiplyVector(local, p4);
 
-	// Original square on local line coordinates.
-	context.fillStyle = unitHyperCubeStyleOriginLocal;
-	context.save();
-	context.transform(local.x.x, local.y.x,
-		          local.x.y, local.y.y,
-		          local.x.z, local.y.z);
-	context.fillRect(0, 0, 1, 1);
-	context.restore();
+	// Orthogonally project by discarding coordinates.
+	const p1olp = p1ol.scale(0, 1, 1);
+	const p2olp = p2ol.scale(0, 1, 1);
+	const p3olp = p3ol.scale(0, 1, 1);
+	const p4olp = p4ol.scale(0, 1, 1);
+
+	// Transform back to global coordinates.
+	const p1op = mat3.multiplyVector(localInverse, p1olp);
+	const p2op = mat3.multiplyVector(localInverse, p2olp);
+	const p3op = mat3.multiplyVector(localInverse, p3olp);
+	const p4op = mat3.multiplyVector(localInverse, p4olp);
 
 	// Unit square moveable with middle mouse button.
-	context.fillStyle = unitHyperCubeStyleOrigin;
-	context.fillRect(0, 0, 1, 1);
 	context.fillStyle = unitHyperCubeStyle;
 	context.fillRect(unitHyperCubePosition.x, unitHyperCubePosition.y, 1, 1);
 
@@ -380,19 +389,12 @@ function draw() {
 	context.lineTo(b2.x, b2.y);
 	context.stroke();
 
-	// Draw offset of unit square.
-	context.strokeStyle = vectorStyleGlobal;
-	drawVector(p1o, p1);
-	drawVector(p2o, p2);
-	drawVector(p3o, p3);
-	drawVector(p4o, p4);
-
-	// Now in local coordinates.
-	context.strokeStyle = vectorStyleLocal;
-	drawVector(p1ol, p1);
-	drawVector(p2ol, p2);
-	drawVector(p3ol, p3);
-	drawVector(p4ol, p4);
+	// Draw projection of unit square onto line.
+	context.strokeStyle = vectorStyle;
+	drawVector(p1op, p1);
+	drawVector(p2op, p2);
+	drawVector(p3op, p3);
+	drawVector(p4op, p4);
 
 	// TODO Multiply that projected region by the original line to get sliver of lattice.
 	// TODO Highlight all nodes within that region.
