@@ -6,11 +6,14 @@ const orthogonalLineThickness = 0.01;
 const vectorThickness = 0.02;
 const vectorHeadLength = 0.125;
 const gridRadius = 0.02;
+const gridShadedRadius = 0.04;
 const axisRadius = 0.03;
 const gridStyle = "black";
+const gridShadedStyle = "gold";
 const axisStyle = "red";
 const lineStyle = "#0c0";
 const shadowStyle = "#80f";
+const sliceStyle = "#cde";
 
 const orthogonalLineStyle = "#080";
 const unitHyperCubeStyle = "blue";
@@ -345,6 +348,19 @@ function draw() {
 	// Transform shadow endpoints back to global coordinates.
 	const w1 = mat3.multiplyVector(localInverse, shadowLocal1);
 	const w2 = mat3.multiplyVector(localInverse, shadowLocal2);
+
+	// Draw slice region
+	const wa = new vec3(-10, (-10 - w1.x) * slope + w1.y, 1);
+	const wb = new vec3( 10, ( 10 - w1.x) * slope + w1.y, 1);
+	const wc = new vec3(-10, (-10 - w2.x) * slope + w2.y, 1);
+	const wd = new vec3( 10, ( 10 - w2.x) * slope + w2.y, 1);
+	context.fillStyle = sliceStyle;
+	context.beginPath();
+	context.moveTo(wa.x, wa.y);
+	context.lineTo(wb.x, wb.y);
+	context.lineTo(wd.x, wd.y);
+	context.lineTo(wc.x, wc.y);
+	context.fill();
 
 	// Unit square moveable with middle mouse button.
 	context.fillStyle = unitHyperCubeStyle;
