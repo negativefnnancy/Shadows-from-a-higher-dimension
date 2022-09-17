@@ -36,6 +36,14 @@ class vec3 {
 		return new vec3(this.x, this.y, this.z);
 	}
 
+	distance() {
+		return Math.sqrt(vec3.dot(this, this));
+	}
+
+	unit() {
+		return vec3.divide(this, this.distance());
+	}
+
 	static add(a, b) {
 		return new vec3(a.x + b.x, a.y + b.y, a.z + b.z);
 	}
@@ -46,6 +54,10 @@ class vec3 {
 
 	static multiply(vector, scalar) {
 		return new vec3(vector.x * scalar, vector.y * scalar, vector.z * scalar);
+	}
+
+	static divide(vector, scalar) {
+		return vec3.multiply(vector, 1 / scalar);
 	}
 
 	static dot(a, b) {
@@ -327,7 +339,17 @@ window.addEventListener("load", event => {
 		mouse.position = position;
 		mouse.positionWorld = positionWorld;
 		if (mouse.left) {
-			camera = mat3.multiply(mat3.translate(mouse.movement.x, mouse.movement.y, 0), camera);
+			if (event.shiftKey) {
+				const position = mouse.position;
+				position.z = 0;
+				const direction = position.unit();
+				const radius = position.distance();
+				const amount = direction.x * mouse.movement.y - direction.y * mouse.movement.x;
+				console.log(direction, radius, amount);
+				camera = mat3.multiply(mat3.rotate(-amount / radius), camera);
+			} else {
+				camera = mat3.multiply(mat3.translate(mouse.movement.x, mouse.movement.y, 0), camera);
+			}
 			draw();
 		}
 		if (mouse.middle) {
