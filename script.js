@@ -9,7 +9,7 @@ const gridRadius = 0.02;
 const gridShadedRadius = 0.04;
 const axisRadius = 0.03;
 const gridStyle = "black";
-const gridShadedStyle = "gold";
+const gridShadedStyle = "#fe0";
 const axisStyle = "red";
 const lineStyle = "#0c0";
 const shadowStyle = "#80f";
@@ -396,10 +396,19 @@ function draw() {
 	// Draw lattice nodes.
 	for (let i = gridMinX; i <= gridMaxX; i++)
 		for (let j = gridMinY; j <= gridMaxY; j++) {
-			context.fillStyle = i == 0 || j == 0 ? axisStyle : gridStyle;
+			// Global coordinates of the node.
 			const position = new vec3(i, j, 1);
+
+			// Now get coordinates local to the projected line.
+			const pl = mat3.multiplyVector(local, position);
+
+			// Now determine if its in the shadowed region.
+			const shadowed = pl.y <= shadowMax && pl.y > shadowMin;
+
+			// Draw it.
+			context.fillStyle = i == 0 || j == 0 ? axisStyle : (shadowed ? gridShadedStyle : gridStyle);
 			context.beginPath();
-			context.arc(position.x, position.y, i == 0 || j == 0 ? axisRadius : gridRadius, 0, 2 * Math.PI, false);
+			context.arc(position.x, position.y, i == 0 || j == 0 ? axisRadius : (shadowed ? gridShadedRadius : gridRadius), 0, 2 * Math.PI, false);
 			context.fill();
 		}
 
@@ -467,6 +476,10 @@ window.addEventListener("load", event => {
 		mouse.position = position;
 		mouse.positionWorld = positionWorld;
 		if (mouse.left) {
+			unitHyperCubePosition = vec3.add(mouse.movementWorld, unitHyperCubePosition);
+			draw();
+		}
+		if (mouse.middle) {
 			if (event.shiftKey) {
 				const position = mouse.position;
 				position.z = 0;
@@ -477,10 +490,6 @@ window.addEventListener("load", event => {
 			} else {
 				camera = mat3.multiply(mat3.translate(mouse.movement.x, mouse.movement.y, 0), camera);
 			}
-			draw();
-		}
-		if (mouse.middle) {
-			unitHyperCubePosition = vec3.add(mouse.movementWorld, unitHyperCubePosition);
 			draw();
 		}
 		if (mouse.right) {
