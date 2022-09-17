@@ -4,6 +4,7 @@ const lineThickness = 0.02;
 const shadowThickness = 0.03;
 const orthogonalLineThickness = 0.01;
 const vectorThickness = 0.02;
+const vectorProjectionThickness = 0.01;
 const vectorHeadLength = 0.125;
 const gridRadius = 0.02;
 const gridShadedRadius = 0.04;
@@ -20,12 +21,15 @@ const unitHyperCubeStyle = "blue";
 const unitHyperCubeStyleOrigin = "#88f";
 const unitHyperCubeStyleOriginLocal = "#8cf";
 const vectorStyle = "#f80";
+const vectorProjectionStyle = "#f0f";
 const scrollAmount = 1.1;
 
 const gridMinX = -20;
 const gridMinY = -20;
 const gridMaxX =  20;
 const gridMaxY =  20;
+
+const epsilon = 0.000001;
 
 let canvas;
 let context;
@@ -283,7 +287,6 @@ function drawVector(a, b) {
 	const headOffset2 = new vec3(Math.cos(angleHead2) * vectorHeadLength, Math.sin(angleHead2) * vectorHeadLength, 1);
 	const h1 = vec3.add(b, headOffset1);
 	const h2 = vec3.add(b, headOffset2);
-	context.lineWidth = vectorThickness;
 	context.beginPath();
 	context.moveTo(a.x, a.y);
 	context.lineTo(b.x, b.y);
@@ -403,13 +406,26 @@ function draw() {
 			const pl = mat3.multiplyVector(local, position);
 
 			// Now determine if its in the shadowed region.
-			const shadowed = pl.y <= shadowMax && pl.y > shadowMin;
+			const shadowed = pl.y <= shadowMax && pl.y > shadowMin + epsilon;
 
 			// Draw it.
 			context.fillStyle = i == 0 || j == 0 ? axisStyle : (shadowed ? gridShadedStyle : gridStyle);
 			context.beginPath();
 			context.arc(position.x, position.y, i == 0 || j == 0 ? axisRadius : (shadowed ? gridShadedRadius : gridRadius), 0, 2 * Math.PI, false);
 			context.fill();
+
+			if (shadowed) {
+				// Project onto plane.
+				const plp = pl.scale(1, 0, 1);
+
+				// Transform back to global coordinates.
+				const pp = mat3.multiplyVector(localInverse, plp);
+
+				// Draw vector.
+				context.lineWidth = vectorProjectionThickness;
+				context.strokeStyle = vectorProjectionStyle;
+				drawVector(position, pp);
+			}
 		}
 
 	// Draw projection plane.
@@ -433,6 +449,7 @@ function draw() {
 	context.stroke();
 
 	// Draw projection of unit square onto line.
+	context.lineWidth = vectorThickness;
 	context.strokeStyle = vectorStyle;
 	drawVector(p1op, p1);
 	drawVector(p2op, p2);
@@ -446,10 +463,6 @@ function draw() {
 	context.moveTo(w1.x, w1.y);
 	context.lineTo(w2.x, w2.y);
 	context.stroke();
-
-	// TODO Multiply that projected region by the original line to get sliver of lattice.
-	// TODO Highlight all nodes within that region.
-	// TODO Project those points onto the original line.
 }
 
 window.addEventListener("load", event => {
