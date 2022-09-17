@@ -22,6 +22,11 @@ const unitHyperCubeStyleOriginLocal = "#8cf";
 const vectorStyle = "#f80";
 const scrollAmount = 1.1;
 
+const gridMinX = -20;
+const gridMinY = -20;
+const gridMaxX =  20;
+const gridMaxY =  20;
+
 let canvas;
 let context;
 
@@ -350,10 +355,10 @@ function draw() {
 	const w2 = mat3.multiplyVector(localInverse, shadowLocal2);
 
 	// Draw slice region
-	const wa = new vec3(-10, (-10 - w1.x) * slope + w1.y, 1);
-	const wb = new vec3( 10, ( 10 - w1.x) * slope + w1.y, 1);
-	const wc = new vec3(-10, (-10 - w2.x) * slope + w2.y, 1);
-	const wd = new vec3( 10, ( 10 - w2.x) * slope + w2.y, 1);
+	const wa = new vec3(gridMinX, (gridMinX - w1.x) * slope + w1.y, 1);
+	const wb = new vec3(gridMaxX, (gridMaxX - w1.x) * slope + w1.y, 1);
+	const wc = new vec3(gridMinX, (gridMinX - w2.x) * slope + w2.y, 1);
+	const wd = new vec3(gridMaxX, (gridMaxX - w2.x) * slope + w2.y, 1);
 	context.fillStyle = sliceStyle;
 	context.beginPath();
 	context.moveTo(wa.x, wa.y);
@@ -367,21 +372,21 @@ function draw() {
 	context.fillRect(unitHyperCubePosition.x, unitHyperCubePosition.y, 1, 1);
 
 	// Draw grid.
-	for (let i = -10; i <= 10; i++) {
+	for (let i = gridMinX; i <= gridMaxX; i++) {
 		context.lineWidth = i == 0 ? axisThickness : gridThickness;
 		context.strokeStyle = i == 0 ? axisStyle : gridStyle;
-		const a = new vec3(i, -10, 1);
-		const b = new vec3(i,  10, 1);
+		const a = new vec3(i, gridMinY, 1);
+		const b = new vec3(i, gridMaxY, 1);
 		context.beginPath();
 		context.moveTo(a.x, a.y);
 		context.lineTo(b.x, b.y);
 		context.stroke();
 	}
-	for (let i = -10; i <= 10; i++) {
+	for (let i = gridMinY; i <= gridMaxY; i++) {
 		context.lineWidth = i == 0 ? axisThickness : gridThickness;
 		context.strokeStyle = i == 0 ? axisStyle : gridStyle;
-		const a = new vec3(-10, i, 1);
-		const b = new vec3( 10, i, 1);
+		const a = new vec3(gridMinX, i, 1);
+		const b = new vec3(gridMaxX, i, 1);
 		context.beginPath();
 		context.moveTo(a.x, a.y);
 		context.lineTo(b.x, b.y);
@@ -389,8 +394,8 @@ function draw() {
 	}
 
 	// Draw lattice nodes.
-	for (let i = -10; i <= 10; i++)
-		for (let j = -10; j <= 10; j++) {
+	for (let i = gridMinX; i <= gridMaxX; i++)
+		for (let j = gridMinY; j <= gridMaxY; j++) {
 			context.fillStyle = i == 0 || j == 0 ? axisStyle : gridStyle;
 			const position = new vec3(i, j, 1);
 			context.beginPath();
@@ -399,8 +404,8 @@ function draw() {
 		}
 
 	// Draw projection plane.
-	const a = new vec3(-10, -10 * slope, 1);
-	const b = new vec3( 10,  10 * slope, 1);
+	const a = new vec3(gridMinX, gridMinX * slope, 1);
+	const b = new vec3(gridMaxX, gridMaxX * slope, 1);
 	context.lineWidth = lineThickness;
 	context.strokeStyle = lineStyle;
 	context.beginPath();
@@ -409,8 +414,8 @@ function draw() {
 	context.stroke();
 
 	// Draw the orthogonal line as well.
-	const a2 = new vec3( 10 * slope, -10, 1);
-	const b2 = new vec3(-10 * slope,  10, 1);
+	const a2 = new vec3(gridMaxX * slope, gridMinX, 1);
+	const b2 = new vec3(gridMinX * slope, gridMaxX, 1);
 	context.lineWidth = orthogonalLineThickness;
 	context.strokeStyle = orthogonalLineStyle;
 	context.beginPath();
@@ -468,7 +473,6 @@ window.addEventListener("load", event => {
 				const direction = position.unit();
 				const radius = position.distance();
 				const amount = direction.x * mouse.movement.y - direction.y * mouse.movement.x;
-				console.log(direction, radius, amount);
 				camera = mat3.multiply(mat3.rotate(-amount / radius), camera);
 			} else {
 				camera = mat3.multiply(mat3.translate(mouse.movement.x, mouse.movement.y, 0), camera);
