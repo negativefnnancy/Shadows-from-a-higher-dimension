@@ -1,11 +1,13 @@
 const gridThickness = 0.01;
 const axisThickness = 0.02;
 const lineThickness = 0.02;
+const orthogonalLineThickness = 0.01;
 const gridRadius = 0.02;
 const axisRadius = 0.03;
 const gridStyle = "black";
 const axisStyle = "red";
-const lineStyle = "green";
+const lineStyle = "#0c0";
+const orthogonalLineStyle = "#080";
 const unitHyperCubeStyle = "blue";
 const scrollAmount = 1.1;
 
@@ -309,6 +311,15 @@ function draw() {
 	context.stroke();
 
 	// TODO Draw the orthogonal line as well.
+	const a2 = new vec3( 10 * slope, -10, 1);
+	const b2 = new vec3(-10 * slope,  10, 1);
+	context.lineWidth = orthogonalLineThickness;
+	context.strokeStyle = orthogonalLineStyle;
+	context.beginPath();
+	context.moveTo(a2.x, a2.y);
+	context.lineTo(b2.x, b2.y);
+	context.stroke();
+
 	// TODO Project square onto the orthogonal line.
 	// TODO Multiply that projected region by the original line to get sliver of lattice.
 	// TODO Highlight all nodes within that region.
