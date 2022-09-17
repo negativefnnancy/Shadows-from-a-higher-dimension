@@ -1,27 +1,28 @@
-const gridThickness = 0.005;
-const axisThickness = 0.01;
-const lineThickness = 0.01;
-const gridRadius = 0.01;
-const axisRadius = 0.015;
+const gridThickness = 0.01;
+const axisThickness = 0.02;
+const lineThickness = 0.02;
+const gridRadius = 0.02;
+const axisRadius = 0.03;
 const gridStyle = "black";
 const axisStyle = "red";
 const lineStyle = "green";
+const unitHyperCubeStyle = "blue";
 const scrollAmount = 1.1;
 
-var canvas;
-var context;
+let canvas;
+let context;
 
 class Mouse {
-	constructor(x, y, left, right) {
-		this.x = x;
-		this.y = y;
+	constructor(position, positionWorld, movement, movementWorld, left, middle, right) {
+		this.position = position; // Normalized device coordinates on screen position.
+		this.positionWorld = positionWorld; // World coordinates.
+		this.movement = movement;
+		this.movementWorld = movementWorld;
 		this.left = left;
+		this.middle = middle;
 		this.right = right;
 	}
 }
-
-var mouse = new Mouse(0, 0, false, false);
-var slope = -1/2;
 
 class vec3 {
 	// x, y, and z are numbers
@@ -37,6 +38,10 @@ class vec3 {
 
 	static add(a, b) {
 		return new vec3(a.x + b.x, a.y + b.y, a.z + b.z);
+	}
+
+	static subtract(a, b) {
+		return vec3.add(a, vec3.multiply(b, -1));
 	}
 
 	static multiply(vector, scalar) {
@@ -216,34 +221,55 @@ class mat3aug {
 	}
 }
 
-var camera = mat3.identity();
+let mouse = new Mouse(new vec3(0, 0, 0), new vec3(0, 0, 0), new vec3(0, 0, 0), new vec3(0, 0, 0), false, false, false);
+let slope = 1/2;
+
+let camera = mat3.identity();
+let unitHyperCubePosition = new vec3(0, 0, 1);
+
+function getScreenTransform() {
+	const unit = canvas.width / 2;
+	const aspect = canvas.height / canvas.width;
+	return mat3.multiply(mat3.multiply(mat3.scale(unit, unit), mat3.translate(1, aspect)), mat3.scale(1, -1));
+}
+
+function getTransform() {
+	return mat3.multiply(getScreenTransform(), camera);
+}
 
 function draw() {
 
-	// Setup normalized device coordinates.
-	const unit = canvas.width / 2;
-	const aspect = canvas.width / canvas.height;
-	context.setTransform(unit, 0, 0, unit, canvas.width / 2, canvas.height / 2);
-
 	// Clear screen.
-	context.clearRect(-1, -1 / aspect, 2, 2 / aspect);
+	context.resetTransform();
+	context.clearRect(0, 0, canvas.width, canvas.height);
+
+	// Setup normalized device coordinates.
+	const transform = getTransform();
+	context.setTransform(transform.x.x, transform.y.x,
+		             transform.x.y, transform.y.y,
+		             transform.x.z, transform.y.z);
+
+
+	// Unit square moveable with middle mouse button.
+	context.fillStyle = unitHyperCubeStyle;
+	context.fillRect(unitHyperCubePosition.x, unitHyperCubePosition.y, 1, 1);
 
 	// Draw grid.
-	for (var i = -10; i <= 10; i++) {
+	for (let i = -10; i <= 10; i++) {
 		context.lineWidth = i == 0 ? axisThickness : gridThickness;
 		context.strokeStyle = i == 0 ? axisStyle : gridStyle;
-		const a = mat3.multiplyVector(camera, new vec3(i, -10, 1));
-		const b = mat3.multiplyVector(camera, new vec3(i,  10, 1));
+		const a = new vec3(i, -10, 1);
+		const b = new vec3(i,  10, 1);
 		context.beginPath();
 		context.moveTo(a.x, a.y);
 		context.lineTo(b.x, b.y);
 		context.stroke();
 	}
-	for (var i = -10; i <= 10; i++) {
+	for (let i = -10; i <= 10; i++) {
 		context.lineWidth = i == 0 ? axisThickness : gridThickness;
 		context.strokeStyle = i == 0 ? axisStyle : gridStyle;
-		const a = mat3.multiplyVector(camera, new vec3(-10, i, 1));
-		const b = mat3.multiplyVector(camera, new vec3( 10, i, 1));
+		const a = new vec3(-10, i, 1);
+		const b = new vec3( 10, i, 1);
 		context.beginPath();
 		context.moveTo(a.x, a.y);
 		context.lineTo(b.x, b.y);
@@ -251,18 +277,18 @@ function draw() {
 	}
 
 	// Draw lattice nodes.
-	for (var i = -10; i <= 10; i++)
-		for (var j = -10; j <= 10; j++) {
+	for (let i = -10; i <= 10; i++)
+		for (let j = -10; j <= 10; j++) {
 			context.fillStyle = i == 0 || j == 0 ? axisStyle : gridStyle;
-			const position = mat3.multiplyVector(camera, new vec3(i, j, 1));
+			const position = new vec3(i, j, 1);
 			context.beginPath();
 			context.arc(position.x, position.y, i == 0 || j == 0 ? axisRadius : gridRadius, 0, 2 * Math.PI, false);
 			context.fill();
 		}
 
 	// Draw projection plane.
-	const a = mat3.multiplyVector(camera, new vec3(-10, -10 * slope, 1));
-	const b = mat3.multiplyVector(camera, new vec3( 10,  10 * slope, 1));
+	const a = new vec3(-10, -10 * slope, 1);
+	const b = new vec3( 10,  10 * slope, 1);
 	context.lineWidth = lineThickness;
 	context.strokeStyle = lineStyle;
 	context.beginPath();
@@ -270,8 +296,6 @@ function draw() {
 	context.lineTo(b.x, b.y);
 	context.stroke();
 
-	// TODO Do inverse matrices in order to properly transform the mouse coordinates by the inverse camera.
-	// TODO Unit square moveable with middle mouse button.
 	// TODO Draw the orthogonal line as well.
 	// TODO Project square onto the orthogonal line.
 	// TODO Multiply that projected region by the original line to get sliver of lattice.
@@ -295,17 +319,23 @@ window.addEventListener("load", event => {
 	});
 
 	canvas.addEventListener("mousemove", event => {
-		const unit = canvas.width / 2;
-		const aspect = canvas.width / canvas.height;
-		mouse.x = event.offsetX / unit - 1;
-		mouse.y = event.offsetY / unit - 1 / aspect;
+		const screen = getScreenTransform();
+		const position = mat3.multiplyVector(screen.invert(), new vec3(event.pageX, event.pageY, 1));
+		const positionWorld = mat3.multiplyVector(camera.invert(), position);
+		mouse.movement = vec3.subtract(position, mouse.position);
+		mouse.movementWorld = vec3.subtract(positionWorld, mouse.positionWorld);
+		mouse.position = position;
+		mouse.positionWorld = positionWorld;
 		if (mouse.left) {
-			camera = mat3.multiply(mat3.translate(event.movementX / unit, event.movementY / unit), camera);
+			camera = mat3.multiply(mat3.translate(mouse.movement.x, mouse.movement.y, 0), camera);
+			draw();
+		}
+		if (mouse.middle) {
+			unitHyperCubePosition = vec3.add(mouse.movementWorld, unitHyperCubePosition);
 			draw();
 		}
 		if (mouse.right) {
-			const position = mat3.multiplyVector(camera.invert(), new vec3(mouse.x, mouse.y, 1));
-			slope = position.y / position.x;
+			slope = mouse.positionWorld.y / mouse.positionWorld.x;
 			draw();
 		}
 	});
@@ -313,6 +343,8 @@ window.addEventListener("load", event => {
 	canvas.addEventListener("mousedown", event => {
 		if (event.button == 0)
 			mouse.left = true;
+		else if (event.button == 1)
+			mouse.middle = true;
 		else if (event.button == 2)
 			mouse.right = true;
 	});
@@ -320,6 +352,8 @@ window.addEventListener("load", event => {
 	canvas.addEventListener("mouseup", event => {
 		if (event.button == 0)
 			mouse.left = false;
+		else if (event.button == 1)
+			mouse.middle = false;
 		else if (event.button == 2)
 			mouse.right = false;
 	});
