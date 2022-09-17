@@ -2,6 +2,8 @@ const gridThickness = 0.01;
 const axisThickness = 0.02;
 const lineThickness = 0.02;
 const orthogonalLineThickness = 0.01;
+const vectorThickness = 0.02;
+const vectorHeadLength = 0.125;
 const gridRadius = 0.02;
 const axisRadius = 0.03;
 const gridStyle = "black";
@@ -9,6 +11,10 @@ const axisStyle = "red";
 const lineStyle = "#0c0";
 const orthogonalLineStyle = "#080";
 const unitHyperCubeStyle = "blue";
+const unitHyperCubeStyleOrigin = "#88f";
+const unitHyperCubeStyleOriginLocal = "#8cf";
+const vectorStyleGlobal = "#ff0";
+const vectorStyleLocal = "#f80";
 const scrollAmount = 1.1;
 
 let canvas;
@@ -44,6 +50,10 @@ class vec3 {
 
 	unit() {
 		return vec3.divide(this, this.distance());
+	}
+
+	angle() {
+		return Math.atan2(this.y, this.x);
 	}
 
 	static add(a, b) {
@@ -236,7 +246,7 @@ class mat3aug {
 }
 
 let mouse = new Mouse(new vec3(0, 0, 0), new vec3(0, 0, 0), new vec3(0, 0, 0), new vec3(0, 0, 0), false, false, false);
-let slope = 1/2;
+let slope = 1 / 2;
 
 let camera = mat3.identity();
 let unitHyperCubePosition = new vec3(0, 0, 1);
@@ -251,6 +261,25 @@ function getTransform() {
 	return mat3.multiply(getScreenTransform(), camera);
 }
 
+function drawVector(a, b) {
+	const angle = vec3.subtract(b, a).angle();
+	const angleHead1 = angle + Math.PI * 0.75;
+	const angleHead2 = angle - Math.PI * 0.75;
+	const headOffset1 = new vec3(Math.cos(angleHead1) * vectorHeadLength, Math.sin(angleHead1) * vectorHeadLength, 1);
+	const headOffset2 = new vec3(Math.cos(angleHead2) * vectorHeadLength, Math.sin(angleHead2) * vectorHeadLength, 1);
+	const h1 = vec3.add(b, headOffset1);
+	const h2 = vec3.add(b, headOffset2);
+	context.lineWidth = vectorThickness;
+	context.beginPath();
+	context.moveTo(a.x, a.y);
+	context.lineTo(b.x, b.y);
+	context.stroke();
+	context.moveTo(h1.x, h1.y);
+	context.lineTo(b.x, b.y);
+	context.lineTo(h2.x, h2.y);
+	context.stroke();
+}
+
 function draw() {
 
 	// Clear screen.
@@ -263,8 +292,39 @@ function draw() {
 		             transform.x.y, transform.y.y,
 		             transform.x.z, transform.y.z);
 
+	// Original vertices of unit square.
+	const p1o = new vec3(0, 0, 1);
+	const p2o = new vec3(1, 0, 1);
+	const p3o = new vec3(0, 1, 1);
+	const p4o = new vec3(1, 1, 1);
+
+	// Translated vertices.
+	const p1 = vec3.add(unitHyperCubePosition, p1o);
+	const p2 = vec3.add(unitHyperCubePosition, p2o);
+	const p3 = vec3.add(unitHyperCubePosition, p3o);
+	const p4 = vec3.add(unitHyperCubePosition, p4o);
+
+	// Get local coordinate system of rotated line.
+	const local = mat3.rotate(-Math.atan(slope));
+
+	// Transform original vertices to local coordinates of line.
+	const p1ol = mat3.multiplyVector(local, p1o);
+	const p2ol = mat3.multiplyVector(local, p2o);
+	const p3ol = mat3.multiplyVector(local, p3o);
+	const p4ol = mat3.multiplyVector(local, p4o);
+
+	// Original square on local line coordinates.
+	context.fillStyle = unitHyperCubeStyleOriginLocal;
+	context.save();
+	context.transform(local.x.x, local.y.x,
+		          local.x.y, local.y.y,
+		          local.x.z, local.y.z);
+	context.fillRect(0, 0, 1, 1);
+	context.restore();
 
 	// Unit square moveable with middle mouse button.
+	context.fillStyle = unitHyperCubeStyleOrigin;
+	context.fillRect(0, 0, 1, 1);
 	context.fillStyle = unitHyperCubeStyle;
 	context.fillRect(unitHyperCubePosition.x, unitHyperCubePosition.y, 1, 1);
 
@@ -310,7 +370,7 @@ function draw() {
 	context.lineTo(b.x, b.y);
 	context.stroke();
 
-	// TODO Draw the orthogonal line as well.
+	// Draw the orthogonal line as well.
 	const a2 = new vec3( 10 * slope, -10, 1);
 	const b2 = new vec3(-10 * slope,  10, 1);
 	context.lineWidth = orthogonalLineThickness;
@@ -320,7 +380,20 @@ function draw() {
 	context.lineTo(b2.x, b2.y);
 	context.stroke();
 
-	// TODO Project square onto the orthogonal line.
+	// Draw offset of unit square.
+	context.strokeStyle = vectorStyleGlobal;
+	drawVector(p1o, p1);
+	drawVector(p2o, p2);
+	drawVector(p3o, p3);
+	drawVector(p4o, p4);
+
+	// Now in local coordinates.
+	context.strokeStyle = vectorStyleLocal;
+	drawVector(p1ol, p1);
+	drawVector(p2ol, p2);
+	drawVector(p3ol, p3);
+	drawVector(p4ol, p4);
+
 	// TODO Multiply that projected region by the original line to get sliver of lattice.
 	// TODO Highlight all nodes within that region.
 	// TODO Project those points onto the original line.
