@@ -1,6 +1,7 @@
 const gridThickness = 0.005;
 const axisThickness = 0.02;
 const lineThickness = 0.02;
+const shadowThickness = 0.03;
 const orthogonalLineThickness = 0.01;
 const vectorThickness = 0.02;
 const vectorHeadLength = 0.125;
@@ -9,6 +10,8 @@ const axisRadius = 0.03;
 const gridStyle = "black";
 const axisStyle = "red";
 const lineStyle = "#0c0";
+const shadowStyle = "#80f";
+
 const orthogonalLineStyle = "#080";
 const unitHyperCubeStyle = "blue";
 const unitHyperCubeStyleOrigin = "#88f";
@@ -333,6 +336,16 @@ function draw() {
 	const p3op = mat3.multiplyVector(localInverse, p3olp);
 	const p4op = mat3.multiplyVector(localInverse, p4olp);
 
+	// Get shadow range and endpoints.
+	const shadowMin = Math.min(p1olp.y, p2olp.y, p3olp.y, p4olp.y);
+	const shadowMax = Math.max(p1olp.y, p2olp.y, p3olp.y, p4olp.y);
+	const shadowLocal1 = new vec3(0, shadowMin, 1);
+	const shadowLocal2 = new vec3(0, shadowMax, 1);
+
+	// Transform shadow endpoints back to global coordinates.
+	const w1 = mat3.multiplyVector(localInverse, shadowLocal1);
+	const w2 = mat3.multiplyVector(localInverse, shadowLocal2);
+
 	// Unit square moveable with middle mouse button.
 	context.fillStyle = unitHyperCubeStyle;
 	context.fillRect(unitHyperCubePosition.x, unitHyperCubePosition.y, 1, 1);
@@ -395,6 +408,14 @@ function draw() {
 	drawVector(p2op, p2);
 	drawVector(p3op, p3);
 	drawVector(p4op, p4);
+
+	// Draw full shadow line segment.
+	context.lineWidth = shadowThickness;
+	context.strokeStyle = shadowStyle;
+	context.beginPath();
+	context.moveTo(w1.x, w1.y);
+	context.lineTo(w2.x, w2.y);
+	context.stroke();
 
 	// TODO Multiply that projected region by the original line to get sliver of lattice.
 	// TODO Highlight all nodes within that region.
