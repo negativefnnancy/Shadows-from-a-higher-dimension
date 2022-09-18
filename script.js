@@ -31,6 +31,8 @@ const gridMaxY =  20;
 
 const epsilon = 0.000001;
 
+const phi = (1 + Math.sqrt(5)) / 2;
+
 let canvas;
 let context;
 
@@ -264,7 +266,7 @@ class mat3aug {
 }
 
 let mouse = new Mouse(new vec3(0, 0, 0), new vec3(0, 0, 0), new vec3(0, 0, 0), new vec3(0, 0, 0), false, false, false);
-let slope = 1 / 2;
+let slope = 1 / phi;
 
 let camera = mat3.identity();
 let unitHyperCubePosition = new vec3(0, 0, 1);
