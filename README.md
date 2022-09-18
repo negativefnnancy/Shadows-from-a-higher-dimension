@@ -14,7 +14,7 @@ If the slope is irrational, however, then it doesn't intersect any node other th
 
 The blue square (the "unit hypercube") is used to isolate the slice of the lattice that is projected. The position of the unit hypercube acts as the seed that determines which (of infinitely many, in the case of aperiodic tilings) variation of possible tilings is cast.
 
-I made this visualizer for the case of a 1-dimensional tiling projected from a 2-dimensional lattice to help understand the basic relationships before considering higher dimensional cases, in particular, the Penrose tilings, which can be seen as 2-dimensional shadows from a 5-dimensional lattice.
+I made this visualizer for the case of a 1-dimensional tiling projected from a 2-dimensional lattice to help understand the basic relationships before considering higher dimensional cases, in particular, the Penrose tilings, which can be seen as 2-dimensional shadows from a 5-dimensional lattice where the slope of the projection plane involves the golden ratio.
 
 I think these things are cooler than they have a right to be. XD
 
