@@ -60,6 +60,10 @@ class vec3 {
 		return new vec3(...values.map((x, i) => x * this.values[i]));
 	}
 
+	static empty(n) {
+		return new vec3(...[...new Array(n).keys()].map(i => 0));
+	}
+
 	static add(a, b) {
 		return new vec3(...a.values.map((x, i) => x + b.values[i]));
 	}
@@ -224,14 +228,14 @@ class mat3 {
 
 	static rotate(angle, x = 0, y = 1, n = 3) {
 		function get_value(i, j) {
-			if (i == j && i == n - 1)
-				return 1;
 			if (i == x && j == x || i == y && j == y)
 				return Math.cos(angle);
 			if (i == x && j == y)
 				return Math.sin(angle);
 			if (i == y && j == x)
 				return -Math.sin(angle);
+			if (i == j)
+				return 1;
 			return 0;
 		}
 		return new mat3(...[...new Array(n).keys()].map(i => new vec3(...[...new Array(n).keys()].map(j => get_value(i, j)))));

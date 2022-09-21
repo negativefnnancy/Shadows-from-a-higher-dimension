@@ -1,44 +1,29 @@
-const gridThickness = 0.005;
-const axisThickness = 0.02;
-const lineThickness = 0.02;
-const shadowThickness = 0.03;
-const orthogonalLineThickness = 0.01;
-const vectorThickness = 0.02;
-const vectorProjectionThickness = 0.01;
-const vectorHeadLength = 0.125;
-const gridRadius = 0.02;
-const gridShadedRadius = 0.04;
-const axisRadius = 0.03;
+const gridThickness = 0.01;
+const axisThickness = 0.04;
+const gridRadius = 0.04;
+const axisRadius = 0.06;
 const gridStyle = "black";
-const gridShadedStyle = "#fe0";
 const axisStyle = "red";
-const lineStyle = "#0c0";
-const shadowStyle = "#80f";
-const sliceStyle = "#cde";
 
-const orthogonalLineStyle = "#080";
-const unitHyperCubeStyle = "blue";
-const unitHyperCubeStyleOrigin = "#88f";
-const unitHyperCubeStyleOriginLocal = "#8cf";
-const vectorStyle = "#f80";
-const vectorProjectionStyle = "#f0f";
 const scrollAmount = 1.1;
+const rotationAmount = 1;
 
-const gridMinX = -20;
-const gridMinY = -20;
-const gridMaxX =  20;
-const gridMaxY =  20;
+const gridMin = -3;
+const gridMax =  3;
 
 const epsilon = 0.000001;
 
 const phi = (1 + Math.sqrt(5)) / 2;
 
+const dimensions = 4;
+
 let canvas;
 let context;
 
-let mouse = new Mouse(new vec3(0, 0, 0), new vec3(0, 0, 0), new vec3(0, 0, 0), new vec3(0, 0, 0), false, false, false);
+let mouse = new Mouse(vec3.empty(3), vec3.empty(3), vec3.empty(3), false, false, false);
 let camera = mat3.identity();
-let unitHyperCubePosition = new vec3(0, 0, 1);
+let rotation = mat3.identity(dimensions + 1);
+let unitHyperCubePosition = new vec3(...[...new Array(dimensions + 1).keys()].map(i => i == dimensions ? 1 : 0));
 
 function getScreenTransform() {
 	const unit = canvas.width / 2;
@@ -68,6 +53,21 @@ function drawVector(a, b) {
 	context.stroke();
 }
 
+function *combinations(n, min, max) {
+	if (n == 0)
+		yield [];
+	else
+		for (let i = min; i <= max; i++)
+			for (let rest of combinations(n - 1, min, max))
+				yield [i].concat(rest);
+}
+
+function cubeVertices(n) {
+	return [...combinations(n, 0, 1)].map(x => new vec3(...x));
+}
+
+const vertices = cubeVertices(dimensions);
+
 function draw() {
 
 	// Clear screen.
@@ -80,44 +80,58 @@ function draw() {
 		             transform.x.y, transform.y.y,
 		             transform.x.z, transform.y.z);
 
-	// Unit square moveable with middle mouse button.
-	context.fillStyle = unitHyperCubeStyle;
-	context.fillRect(unitHyperCubePosition.x, unitHyperCubePosition.y, 1, 1);
+	// Get the unit hyper cube vertices in transformed coordinates.
+	const cubeTransform = mat3.multiply(mat3.translate(...unitHyperCubePosition.values.slice(0, unitHyperCubePosition.values.length - 1)), rotation);
+	const verticesLocal = vertices.map(x => mat3.multiplyVector(cubeTransform, new vec3(...x.values.concat([1]))));
+
+	// Find the min and max on each axis starting with dimension 3.
+	const cubeMin = [...new Array(dimensions).keys()].slice(2).map(i => Math.min(...verticesLocal.map(x => x.values[i])));
+	const cubeMax = [...new Array(dimensions).keys()].slice(2).map(i => Math.max(...verticesLocal.map(x => x.values[i])));
 
 	// Draw grid.
-	for (let i = gridMinX; i <= gridMaxX; i++) {
-		context.lineWidth = i == 0 ? axisThickness : gridThickness;
-		context.strokeStyle = i == 0 ? axisStyle : gridStyle;
-		const a = new vec3(i, gridMinY, 1);
-		const b = new vec3(i, gridMaxY, 1);
-		context.beginPath();
-		context.moveTo(a.x, a.y);
-		context.lineTo(b.x, b.y);
-		context.stroke();
-	}
-	for (let i = gridMinY; i <= gridMaxY; i++) {
-		context.lineWidth = i == 0 ? axisThickness : gridThickness;
-		context.strokeStyle = i == 0 ? axisStyle : gridStyle;
-		const a = new vec3(gridMinX, i, 1);
-		const b = new vec3(gridMaxX, i, 1);
-		context.beginPath();
-		context.moveTo(a.x, a.y);
-		context.lineTo(b.x, b.y);
-		context.stroke();
-	}
-
-	// Draw lattice nodes.
-	for (let i = gridMinX; i <= gridMaxX; i++)
-		for (let j = gridMinY; j <= gridMaxY; j++) {
-			// Global coordinates of the node.
-			const position = new vec3(i, j, 1);
-
-			// Draw it.
-			context.fillStyle = i == 0 || j == 0 ? axisStyle : gridStyle;
-			context.beginPath();
-			context.arc(position.x, position.y, i == 0 || j == 0 ? axisRadius : gridRadius, 0, 2 * Math.PI, false);
-			context.fill();
+	for (let i = 0; i < dimensions; i++) {
+		for (line_index of combinations(dimensions - 1, gridMin, gridMax)) {
+			const axis = line_index.reduce((a, b) => a && b == 0, true);
+			context.lineWidth = axis ? axisThickness : gridThickness;
+			context.strokeStyle = axis ? axisStyle : gridStyle;
+			context.fillStyle = axis ? axisStyle : gridStyle;
+			// Draw lattice nodes.
+			for (let x = gridMin; x < gridMax; x++) {
+				const a = new vec3(...line_index.slice(0, i).concat([x]).concat(line_index.slice(i)).concat([1]));
+				const b = new vec3(...line_index.slice(0, i).concat([x + 1]).concat(line_index.slice(i)).concat([1]));
+				const al = mat3.multiplyVector(rotation, a);
+				const bl = mat3.multiplyVector(rotation, b);
+				// Make sure we are in the slice of the unit hyper cube for the xy plane.
+				const a0 = al.values.slice(2, dimensions).reduce((a, b, i) => a && b >= cubeMin[i] && b < cubeMax[i], true);
+				const b0 = bl.values.slice(2, dimensions).reduce((a, b, i) => a && b >= cubeMin[i] && b < cubeMax[i], true);
+				let [ar, ag, ab] = al.values.slice(2, 5).map((x, i) => x - cubeMin[i]);
+				if (isNaN(ar))
+					ar = 0;
+				if (isNaN(ag))
+					ag = 0;
+				if (isNaN(ab))
+					ab = 0;
+				//const [br, bg, bb] = bl.values.slice(2, 5).map((x, i) => x - cubeMin[i]);
+				context.strokeStyle = context.fillStyle = `rgb(${ar * 255}, ${ag * 255}, ${ab * 255})`;
+				if (a0 && b0) {
+					context.beginPath();
+					context.moveTo(al.x, al.y);
+					context.lineTo(bl.x, bl.y);
+					context.stroke();
+				}
+				if (a0) {
+					context.beginPath();
+					context.arc(al.x, al.y, axis ? axisRadius : gridRadius, 0, 2 * Math.PI, false);
+					context.fill();
+				}
+				//if (b0) {
+				//	context.beginPath();
+				//	context.arc(bl.x, bl.y, axis ? axisRadius : gridRadius, 0, 2 * Math.PI, false);
+				//	context.fill();
+				//}
+			}
 		}
+	}
 }
 
 window.addEventListener("load", event => {
@@ -145,14 +159,19 @@ window.addEventListener("load", event => {
 		mouse.position = position;
 		mouse.positionWorld = positionWorld;
 		if (mouse.left || mouse.right || mouse.middle) {
-			if (event.shiftKey) {
+			if (event.shiftKey || event.ctrlKey) {
+				let i;
+				if (event.shiftKey && !event.ctrlKey)
+					i = 2;
+				else if (!event.shiftKey && event.ctrlKey)
+					i = 3;
+				else if (event.shiftKey && event.ctrlKey)
+					i = 4;
 				// Rotate camera.
-				const position = mouse.position;
-				position.z = 0;
-				const direction = position.unit();
-				const radius = position.distance();
-				const amount = direction.x * mouse.movement.y - direction.y * mouse.movement.x;
-				camera = mat3.multiply(mat3.rotate(-amount / radius), camera);
+				const amountX = mouse.movement.x * rotationAmount;
+				const amountY = mouse.movement.y * rotationAmount;
+				rotation = mat3.multiply(mat3.rotate(amountX, 0, i, dimensions + 1), rotation);
+				rotation = mat3.multiply(mat3.rotate(amountY, 1, i, dimensions + 1), rotation);
 			} else {
 				// Pan camera.
 				camera = mat3.multiply(mat3.translate(mouse.movement.x, mouse.movement.y), camera);
