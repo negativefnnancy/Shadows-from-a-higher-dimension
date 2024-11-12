@@ -2,6 +2,12 @@
 
 A visualization of tilings as projections from a higher dimensional integer lattice!
 
+
+https://github.com/user-attachments/assets/308a3109-0c81-40d3-8432-7cd47735fb39
+
+
+
+
 ![Screenshot](screenshot.png)
 
 ## Explanation
